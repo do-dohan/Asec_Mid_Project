@@ -1,0 +1,62 @@
+# ============================================================
+# Docker ignore for Asec_Mid_Project
+# 로봇항공기대회 중급 프로젝트 Docker build 제외 목록
+# ============================================================
+
+# Git / IDE
+.git
+.gitignore
+.vscode
+.idea
+
+# Python cache
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+
+# Temporary / backup files
+*.tmp
+*.bak
+*.swp
+*~
+
+# ROS2 build outputs
+ros_ws/build
+ros_ws/install
+ros_ws/log
+
+# Runtime data
+data/raw
+data/masks
+data/overlay
+data/dataset
+logs
+
+# Model outputs
+models/checkpoints
+models/exported
+models/engine
+
+# Large media / dataset files
+*.bag
+*.db3
+*.mcap
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.jpg
+*.jpeg
+*.png
+*.bmp
+*.tiff
+
+# AI model files
+*.pt
+*.pth
+*.onnx
+*.engine
+
+# Docker archives
+*.tar

@@ -1,0 +1,106 @@
+name: asec_mid_project
+
+services:
+  asec_mid_dev:
+    # --------------------------------------------------------
+    # 현재 폴더의 Dockerfile을 사용해서 이미지를 빌드합니다.
+    # Build the image from the Dockerfile in the current folder.
+    # --------------------------------------------------------
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    # --------------------------------------------------------
+    # HRI_Drone_project와 충돌하지 않도록 별도 이미지명을 사용합니다.
+    # Use a separate image name to avoid conflict with HRI_Drone_project.
+    # --------------------------------------------------------
+    image: asec_mid_env
+    # --------------------------------------------------------
+    # 컨테이너 이름을 고정합니다.
+    # Fix the container name for easy exec/start/stop commands.
+    # --------------------------------------------------------
+    container_name: asec_mid_container
+
+    # --------------------------------------------------------
+    # 컨테이너 내부 기본 작업 위치를 프로젝트 루트로 고정합니다.
+    # Set the default working directory inside the container.
+    # --------------------------------------------------------
+    working_dir: /project
+
+    # --------------------------------------------------------
+    # ROS2/Gazebo 통신을 단순화하기 위해 host network를 사용합니다.
+    # Use host networking to simplify ROS2/Gazebo communication.
+    # --------------------------------------------------------
+    network_mode: host
+
+    # --------------------------------------------------------
+    # NVIDIA GPU를 컨테이너에 연결합니다.
+    # Attach the NVIDIA GPU to the container.
+    # --------------------------------------------------------
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+    # --------------------------------------------------------
+    # PyTorch 학습, OpenCV, Gazebo에서 shared memory 부족을 방지합니다.
+    # Increase shared memory size for PyTorch, OpenCV, and Gazebo.
+    # --------------------------------------------------------
+    shm_size: "8gb"
+    
+    # --------------------------------------------------------
+    # GUI, Gazebo, NVIDIA GPU, Vulkan 관련 환경변수입니다.
+    # Environment variables for GUI, Gazebo, NVIDIA GPU, and Vulkan.
+    # --------------------------------------------------------
+    environment:
+      - DISPLAY=${DISPLAY}
+      - QT_X11_NO_MITSHM=1
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=all
+      - __NV_PRIME_RENDER_OFFLOAD=1
+      - __GLX_VENDOR_LIBRARY_NAME=nvidia
+      - VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/nvidia_icd.json
+      - GZ_SIM_RENDER_ENGINE_DEVICE_API=vulkan
+      - GZ_VERSION=harmonic
+      - PROJECT_ROOT=/project
+      - ROS_WS=/project/ros_ws
+
+    # --------------------------------------------------------
+    # bind mount 설정입니다.
+    # Bind mount settings.
+    #
+    # ./:/project
+    #   호스트 ~/Asec_Mid_Project 전체를 컨테이너 /project로 연결합니다.
+    #
+    # /tmp/.X11-unix:/tmp/.X11-unix
+    #   OpenCV imshow, xeyes, Gazebo GUI, RViz 창을 띄우기 위한 X11 소켓 공유입니다.
+    #
+    # /dev:/dev
+    #   /dev/video0 카메라, USB, serial 장치 접근을 위한 장치 공유입니다.
+    # --------------------------------------------------------
+    volumes:
+      - ./:/project
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - /dev:/dev
+
+    # --------------------------------------------------------
+    # 카메라, USB, 시리얼 장치 접근을 쉽게 하기 위해 privileged를 사용합니다.
+    # Use privileged mode for easier camera, USB, and serial device access.
+    # --------------------------------------------------------
+    privileged: true
+
+    # --------------------------------------------------------
+    # docker exec -it로 들어갈 수 있도록 TTY와 stdin을 유지합니다.
+    # Keep TTY and stdin open for interactive development.
+    # --------------------------------------------------------
+    stdin_open: true
+    tty: true
+
+    # --------------------------------------------------------
+    # 컨테이너가 바로 종료되지 않고 계속 살아있게 합니다.
+    # Keep the container alive.
+    # --------------------------------------------------------
+    command: tail -f /dev/null

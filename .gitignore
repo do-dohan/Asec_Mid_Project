@@ -1,0 +1,64 @@
+# ============================================================
+# Git ignore for Asec_Mid_Project
+# 로봇항공기대회 중급 프로젝트 Git 제외 목록
+# ============================================================
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# ROS2 colcon build outputs
+ros_ws/build/
+ros_ws/install/
+ros_ws/log/
+
+# Runtime data
+data/raw/
+data/masks/
+data/overlay/
+data/dataset/
+logs/
+
+# Model outputs
+models/checkpoints/
+models/exported/
+models/engine/
+
+# Large data / media files
+*.bag
+*.db3
+*.mcap
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.jpg
+*.jpeg
+*.png
+*.bmp
+*.tiff
+
+# AI model files
+*.pt
+*.pth
+*.onnx
+*.engine
+
+# Temporary / backup files
+*.tmp
+*.bak
+*.swp
+*~
+
+# IDE / editor
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Docker archives
+*.tar
