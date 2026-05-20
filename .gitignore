@@ -62,3 +62,6 @@ Thumbs.db
 
 # Docker archives
 *.tar
+
+# External firmware repositories
+firmware/PX4-Autopilot/

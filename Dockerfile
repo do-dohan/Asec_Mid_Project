@@ -5,7 +5,7 @@
 # Stack:
 #   - ROS2 Humble
 #   - Ubuntu 22.04 Jammy
-#   - Gazebo Harmonic
+#   - Gazebo Classic
 #   - OpenCV / NumPy / scikit-image
 #
 # Purpose:
@@ -24,7 +24,7 @@
 # Stack:
 #   - ROS2 Humble
 #   - Ubuntu 22.04 Jammy
-#   - Gazebo Harmonic
+#   - Gazebo Classic
 #   - OpenCV / NumPy / scikit-image
 #
 # Purpose:
@@ -70,18 +70,6 @@ ENV LANG=C.UTF-8
 ENV LC_ALL=C.UTF-8
 ENV PYTHONUNBUFFERED=1
 
-
-# ------------------------------------------------------------
-# (핵심) Gazebo 버전을 Harmonic으로 고정합니다.
-# (Core) Fix the Gazebo version to Harmonic.
-#
-# HRI_Drone_project에서도 Garden 대신 Harmonic 방향으로 정리했으므로,
-# 새 프로젝트도 Gazebo Harmonic으로 맞춥니다.
-#
-# The HRI_Drone_project also uses Gazebo Harmonic instead of Garden,
-# so this project follows the same version direction.
-# ------------------------------------------------------------
-ENV GZ_VERSION=harmonic
 
 
 # ------------------------------------------------------------
@@ -162,6 +150,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     htop \
     tmux \
     xterm \
+    iproute2 \
     && rm -rf /var/lib/apt/lists/*
 
 
@@ -411,6 +400,20 @@ RUN python3 -m pip install --no-cache-dir \
 
 
 # ------------------------------------------------------------
+# (PX4 SITL) Python build dependencies
+# ------------------------------------------------------------
+RUN python3 -m pip install --no-cache-dir \
+    kconfiglib \
+    empy==3.3.4 \
+    pyros-genmsg \
+    jinja2 \
+    jsonschema \
+    packaging \
+    toml \
+    pyyaml
+
+
+# ------------------------------------------------------------
 # (필수) ROS2 vision/image 관련 패키지를 설치합니다.
 # (Required) Install ROS2 vision/image related packages.
 #
@@ -479,42 +482,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 
 # ------------------------------------------------------------
-# (핵심) Gazebo Harmonic과 ROS-Gazebo bridge를 설치합니다.
-# (Core) Install Gazebo Harmonic and ROS-Gazebo bridge.
-#
-# gz-harmonic:
-#   Gazebo Harmonic 시뮬레이터 본체입니다.
-#
-# libgz-sim8-dev:
-#   Gazebo Harmonic의 simulation core 개발 라이브러리입니다.
-#
-# libgz-transport13-dev:
-#   Gazebo 내부 pub/sub 통신 개발 라이브러리입니다.
-#
-# libgz-msgs10-dev:
-#   Gazebo 메시지 타입 개발 라이브러리입니다.
-#
-# libgz-common5-dev:
-#   Gazebo 공통 유틸리티 개발 라이브러리입니다.
-#
-# libgz-math7-dev:
-#   Gazebo 수학/좌표/Quaternion 계산 라이브러리입니다.
-#
-# ros-humble-ros-gzharmonic:
-#   ROS2 Humble과 Gazebo Harmonic을 연결하는 bridge 패키지입니다.
-# ------------------------------------------------------------
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    gz-harmonic \
-    libgz-sim8-dev \
-    libgz-transport13-dev \
-    libgz-msgs10-dev \
-    libgz-common5-dev \
-    libgz-math7-dev \
-    ros-humble-ros-gzharmonic \
-    && rm -rf /var/lib/apt/lists/*
-
-
-# ------------------------------------------------------------
 # (권장) Git safe.directory 설정을 추가합니다.
 # (Recommended) Add Git safe.directory configuration.
 #
@@ -557,6 +524,26 @@ RUN mkdir -p \
     /project/models/checkpoints \
     /project/models/exported
 
+
+# ------------------------------------------------------------
+# Gazebo Classic is used for PX4 SITL mission_sim.
+# (PX4 SITL) Gazebo Classic and ROS-Gazebo Classic packages
+# ------------------------------------------------------------
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gazebo \
+    libgazebo-dev \
+    ros-humble-gazebo-ros-pkgs \
+    ros-humble-gazebo-msgs \
+    ros-humble-gazebo-plugins \
+    libgstreamer1.0-dev \
+    libgstreamer-plugins-base1.0-dev \
+    gstreamer1.0-plugins-base \
+    gstreamer1.0-plugins-good \
+    tini \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN python3 -m pip install --no-cache-dir --force-reinstall "numpy==1.26.4"
+
 # ------------------------------------------------------------
 # (필수) 기본 작업 디렉터리를 ROS2 workspace로 설정합니다.
 # (Required) Set the default working directory to the ROS2 workspace.
@@ -575,18 +562,23 @@ WORKDIR /project
 # if [ -f /ros_ws/install/setup.bash ]; then source ...:
 #   사용자가 colcon build를 한 뒤 생성되는 workspace 환경을 자동 로드합니다.
 #
-# export GZ_VERSION=harmonic:
-#   Gazebo Harmonic 사용을 명시합니다.
 #
 # cd /ros_ws:
 #   터미널 시작 위치를 ROS workspace로 맞춥니다.
 # ------------------------------------------------------------
 RUN echo "source /opt/ros/humble/setup.bash" >> /root/.bashrc && \
     echo "if [ -f /project/ros_ws/install/setup.bash ]; then source /project/ros_ws/install/setup.bash; fi" >> /root/.bashrc && \
-    echo "export GZ_VERSION=harmonic" >> /root/.bashrc && \
     echo "export PROJECT_ROOT=/project" >> /root/.bashrc && \
     echo "export ROS_WS=/project/ros_ws" >> /root/.bashrc && \
+    echo "export PX4_ROOT=/project/firmware/PX4-Autopilot" >> /root/.bashrc && \
     echo "cd /project" >> /root/.bashrc
+
+RUN echo "export PX4_ROOT=/project/firmware/PX4-Autopilot" >> /root/.bashrc && \
+    echo "export PX4_BUILD_DIR=\$PX4_ROOT/build/px4_sitl_default" >> /root/.bashrc && \
+    echo "export PX4_GAZEBO_CLASSIC_DIR=\$PX4_ROOT/Tools/simulation/gazebo-classic/sitl_gazebo-classic" >> /root/.bashrc && \
+    echo "export GAZEBO_PLUGIN_PATH=\$PX4_BUILD_DIR/build_gazebo-classic:\$GAZEBO_PLUGIN_PATH" >> /root/.bashrc && \
+    echo "export GAZEBO_MODEL_PATH=\$PX4_GAZEBO_CLASSIC_DIR/models:\$GAZEBO_MODEL_PATH" >> /root/.bashrc && \
+    echo "export LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu/gazebo-11/plugins:\$PX4_BUILD_DIR/build_gazebo-classic:\$LD_LIBRARY_PATH" >> /root/.bashrc
 
 
 # ------------------------------------------------------------
@@ -596,4 +588,5 @@ RUN echo "source /opt/ros/humble/setup.bash" >> /root/.bashrc && \
 # 실제 compose에서는 tail -f /dev/null로 컨테이너를 유지할 예정입니다.
 # 그래도 Dockerfile 자체의 기본 진입점은 bash로 둡니다.
 # ------------------------------------------------------------
+ENTRYPOINT ["tini", "--", "/ros_entrypoint.sh"]
 CMD ["bash"]

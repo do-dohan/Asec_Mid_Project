@@ -1,0 +1,205 @@
+#!/usr/bin/env bash
+
+# ------------------------------------------------------------
+# Stop on error.
+# 에러가 나면 바로 스크립트를 중단한다.
+# ------------------------------------------------------------
+set -e
+
+# ------------------------------------------------------------
+# PX4 / Gazebo Classic paths.
+# PX4와 Gazebo Classic 관련 경로를 지정한다.
+# ------------------------------------------------------------
+export PX4_ROOT=/project/firmware/PX4-Autopilot
+export PX4_BUILD_DIR=$PX4_ROOT/build/px4_sitl_default
+export PX4_GAZEBO_CLASSIC_DIR=$PX4_ROOT/Tools/simulation/gazebo-classic/sitl_gazebo-classic
+
+# ------------------------------------------------------------
+# Gazebo plugin/model/library paths.
+# Gazebo가 PX4 plugin, model, shared library를 찾을 수 있게 한다.
+# ------------------------------------------------------------
+export GAZEBO_PLUGIN_PATH=$PX4_BUILD_DIR/build_gazebo-classic:$GAZEBO_PLUGIN_PATH
+export GAZEBO_MODEL_PATH=$PX4_GAZEBO_CLASSIC_DIR/models:$GAZEBO_MODEL_PATH
+export LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu/gazebo-11/plugins:$PX4_BUILD_DIR/build_gazebo-classic:$LD_LIBRARY_PATH
+
+# ------------------------------------------------------------
+# Select model and world.
+# 기본값은 iris + competition.world.
+# 나중에 iris_comp가 완성되면 첫 번째 인자로 iris_comp를 넣으면 된다.
+# ------------------------------------------------------------
+MODEL=${1:-iris}
+WORLD=${2:-competition}
+
+# ------------------------------------------------------------
+# PX4 simulation environment variables.
+# PX4가 어떤 Gazebo model/world를 쓰는지 알 수 있게 한다.
+# ------------------------------------------------------------
+export PX4_SIM_MODEL=gazebo-classic_${MODEL}
+export PX4_SIM_WORLD=${WORLD}
+export PX4_SIM_HOSTNAME=localhost
+
+# ------------------------------------------------------------
+# File paths.
+# 실행할 world 파일과 model sdf 파일 경로를 만든다.
+# ------------------------------------------------------------
+WORLD_FILE=$PX4_GAZEBO_CLASSIC_DIR/worlds/${WORLD}.world
+MODEL_FILE=$PX4_GAZEBO_CLASSIC_DIR/models/${MODEL}/${MODEL}.sdf
+
+# ------------------------------------------------------------
+# PX4 binary and rootfs paths.
+# PX4 SITL 바이너리와 실행 디렉토리 경로.
+# ------------------------------------------------------------
+PX4_BIN=$PX4_BUILD_DIR/bin/px4
+PX4_ETC=$PX4_BUILD_DIR/etc
+PX4_ROOTFS=$PX4_BUILD_DIR/rootfs
+
+# ------------------------------------------------------------
+# Cleanup function.
+# Ctrl+C 또는 종료 시 Gazebo/PX4 관련 프로세스를 정리한다.
+# ------------------------------------------------------------
+cleanup() {
+    echo ""
+    echo "🧹 Cleaning up PX4 / Gazebo processes..."
+
+    pkill -TERM -f "gz model" 2>/dev/null || true
+    pkill -TERM -f gzclient 2>/dev/null || true
+    pkill -TERM -f gzserver 2>/dev/null || true
+    pkill -TERM -f gazebo 2>/dev/null || true
+    pkill -TERM -f px4 2>/dev/null || true
+
+    sleep 1
+
+    echo "✅ Cleanup done."
+}
+
+# ------------------------------------------------------------
+# Run cleanup when script exits.
+# 스크립트가 끝나거나 Ctrl+C를 누르면 cleanup을 실행한다.
+# ------------------------------------------------------------
+trap cleanup EXIT INT TERM
+
+# ------------------------------------------------------------
+# Pre-checks.
+# 필요한 파일들이 실제로 있는지 확인한다.
+# ------------------------------------------------------------
+if [ ! -f "$WORLD_FILE" ]; then
+    echo "❌ World file not found: $WORLD_FILE"
+    exit 1
+fi
+
+if [ ! -f "$MODEL_FILE" ]; then
+    echo "❌ Model file not found: $MODEL_FILE"
+    exit 1
+fi
+
+if [ ! -x "$PX4_BIN" ]; then
+    echo "❌ PX4 binary not found or not executable: $PX4_BIN"
+    exit 1
+fi
+
+# ------------------------------------------------------------
+# Clean old processes before starting.
+# 시작 전 이전 실행 찌꺼기를 정리한다.
+# ------------------------------------------------------------
+echo "🧹 Cleaning old processes..."
+pkill -TERM -f "gz model" 2>/dev/null || true
+pkill -TERM -f gzclient 2>/dev/null || true
+pkill -TERM -f gzserver 2>/dev/null || true
+pkill -TERM -f gazebo 2>/dev/null || true
+pkill -TERM -f px4 2>/dev/null || true
+sleep 2
+
+# ------------------------------------------------------------
+# Start gzserver.
+# Gazebo 서버만 실행한다. GUI는 띄우지 않는다.
+# ------------------------------------------------------------
+echo "🚀 Starting Gazebo server..."
+gzserver --verbose "$WORLD_FILE" \
+    -s libgazebo_ros_init.so \
+    -s libgazebo_ros_factory.so &
+
+GZSERVER_PID=$!
+
+# ------------------------------------------------------------
+# Wait for Gazebo master port 11345.
+# Gazebo master가 준비될 때까지 기다린다.
+# ------------------------------------------------------------
+echo "⏳ Waiting for Gazebo master port 11345..."
+
+for i in $(seq 1 30); do
+    if ss -ltn 2>/dev/null | grep -q ":11345"; then
+        echo "✅ Gazebo master is ready."
+        break
+    fi
+
+    echo "   waiting for 11345... ($i/30)"
+    sleep 1
+done
+# ------------------------------------------------------------
+# Wait for competition world / factory topics.
+# 11345 포트가 열렸다고 world가 완전히 로드된 것은 아니다.
+# competition world의 factory topic이 보일 때까지 기다린다.
+# ------------------------------------------------------------
+echo "⏳ Waiting for Gazebo world/factory to be ready..."
+
+for i in $(seq 1 30); do
+    if gz topic -l 2>/dev/null | grep -q "/gazebo/${WORLD}/factory"; then
+        echo "✅ Gazebo world/factory is ready."
+        break
+    fi
+
+    echo "   waiting for /gazebo/${WORLD}/factory... ($i/30)"
+    sleep 1
+done
+
+# Extra stabilization delay.
+# Gazebo topic이 보인 직후에도 plugin 초기화가 덜 끝날 수 있어서 잠깐 더 기다린다.
+sleep 3
+# ------------------------------------------------------------
+# Spawn model.
+# competition.world 안에 드론 모델을 수동으로 넣는다.
+# ------------------------------------------------------------
+echo "🚁 Spawning model: $MODEL"
+
+timeout -k 5 60 gz model --verbose \
+    --world-name "$WORLD" \
+    --spawn-file="$MODEL_FILE" \
+    --model-name="$MODEL" \
+    -x 1.01 -y 0.98 -z 0.83 || true
+
+# ------------------------------------------------------------
+# Wait for simulator TCP port 4560.
+# Gazebo의 mavlink_interface가 PX4 연결 포트 4560을 열 때까지 기다린다.
+# ------------------------------------------------------------
+echo "⏳ Waiting for Gazebo simulator TCP port 4560..."
+
+for i in $(seq 1 60); do
+    if ss -ltn 2>/dev/null | grep -q ":4560"; then
+        echo "✅ Gazebo simulator TCP port 4560 is ready."
+        break
+    fi
+
+    echo "   waiting for 4560... ($i/60)"
+    sleep 1
+done
+
+# ------------------------------------------------------------
+# Final 4560 check.
+# 4560이 안 열렸으면 PX4를 실행하지 않는다.
+# ------------------------------------------------------------
+if ! ss -ltn 2>/dev/null | grep -q ":4560"; then
+    echo "❌ Port 4560 did not open. Model/plugin is not ready."
+    echo "   Check model SDF and libgazebo_mavlink_interface.so."
+    exit 1
+fi
+
+# ------------------------------------------------------------
+# Run PX4.
+# PX4 SITL 바이너리를 직접 실행한다.
+# 이 터미널이 pxh> 콘솔이 된다.
+# ------------------------------------------------------------
+echo "🚀 Starting PX4 SITL..."
+mkdir -p "$PX4_ROOTFS"
+cd "$PX4_ROOTFS"
+
+"$PX4_BIN" "$PX4_ETC"

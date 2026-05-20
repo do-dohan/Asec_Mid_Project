@@ -1,0 +1,66 @@
+0. 실행 전 정리
+
+pkill -TERM -f "cmake --build"
+pkill -TERM -f "sitl_run.sh"
+pkill -TERM -f "gz model"
+pkill -TERM -f gzserver
+pkill -TERM -f gzclient
+pkill -TERM -f gazebo
+pkill -TERM -f px4
+sleep 3
+이전에 남아 있을 수 있는 PX4 / Gazebo / 모델 스폰 프로세스를 정리한다.
+
+ps -eo pid,ppid,stat,cmd | grep -E "gzserver|gzclient|gz model|gazebo|px4|sitl_run|cmake --build" | grep -v grep
+아직 남아 있는 Gazebo/PX4 관련 프로세스가 있는지 확인한다.
+아무것도 안 나오면 깨끗한 상태다.
+
+ss -ltnp | grep -E "11345|4560"
+11345 = Gazebo master/server 포트
+4560 = PX4와 Gazebo mavlink_interface가 연결되는 TCP 포트
+
+실행 전에는 아무것도 안 나오는 게 좋다.
+
+docker exec -it asec_mid_container bash
+source /project/setup_px4_gazebo_classic.sh
+gzserver --verbose $PX4_GAZEBO_CLASSIC_DIR/worlds/competition.world \
+  -s libgazebo_ros_init.so \
+  -s libgazebo_ros_factory.so
+competition.world를 Gazebo 서버로 실행한다.
+GUI 없이 서버만 띄운다.
+ROS2 Gazebo plugin도 함께 로드한다.
+
+docker exec -it asec_mid_container bash
+source /project/setup_px4_gazebo_classic.sh
+timeout -k 5 60 gz model --verbose \
+  --spawn-file=$PX4_GAZEBO_CLASSIC_DIR/models/iris/iris.sdf \
+  --model-name=iris \
+  -x 1.01 -y 0.98 -z 0.83
+competition.world 안에 기본 iris 드론 모델을 넣는다.
+이 모델 안에 libgazebo_mavlink_interface.so가 있어서 4560 포트를 연다.
+ss -ltnp | grep 4560
+(
+    LISTEN ... :4560 ... gzserver
+)
+
+docker exec -it asec_mid_container bash
+source /project/setup_px4_gazebo_classic.sh
+export PX4_SIM_MODEL=gazebo-classic_iris
+export PX4_SIM_WORLD=competition
+PX4에게 현재 시뮬레이션 모델은 gazebo-classic_iris이고,
+world는 competition이라고 알려준다.
+cd /project/firmware/PX4-Autopilot/build/px4_sitl_default/rootfs
+/project/firmware/PX4-Autopilot/build/px4_sitl_default/bin/px4 \
+  /project/firmware/PX4-Autopilot/build/px4_sitl_default/etc
+PX4 SITL 바이너리를 직접 실행한다.
+make의 자동 실행 흐름을 우회한다.
+(
+    Simulator connected on TCP port 4560.
+    Startup script returned successfully
+    pxh>
+    Ready for takeoff!
+)
+
+docker exec -it asec_mid_container bash
+source /project/setup_px4_gazebo_classic.sh
+gzclient --verbose
+이미 떠 있는 gzserver에 Gazebo GUI 클라이언트를 붙인다.

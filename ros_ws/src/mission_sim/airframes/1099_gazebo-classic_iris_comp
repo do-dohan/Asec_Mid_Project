@@ -1,0 +1,44 @@
+#!/bin/sh
+#
+# @name Iris Comp (indoor, down camera, opt flow)
+#
+# @type Quadrotor
+#
+
+. ${R}etc/init.d/rc.mc_defaults
+
+param set-default CA_AIRFRAME 0
+param set-default CA_ROTOR_COUNT 4
+param set-default CA_ROTOR0_PX 0.1515
+param set-default CA_ROTOR0_PY 0.245
+param set-default CA_ROTOR0_KM 0.05
+param set-default CA_ROTOR1_PX -0.1515
+param set-default CA_ROTOR1_PY -0.1875
+param set-default CA_ROTOR1_KM 0.05
+param set-default CA_ROTOR2_PX 0.1515
+param set-default CA_ROTOR2_PY -0.245
+param set-default CA_ROTOR2_KM -0.05
+param set-default CA_ROTOR3_PX -0.1515
+param set-default CA_ROTOR3_PY 0.1875
+param set-default CA_ROTOR3_KM -0.05
+
+param set-default PWM_MAIN_FUNC1 101
+param set-default PWM_MAIN_FUNC2 102
+param set-default PWM_MAIN_FUNC3 103
+param set-default PWM_MAIN_FUNC4 104
+
+# GPS-denied: optical flow + lidar
+param set-default SYS_HAS_GPS 0
+param set-default EKF2_GPS_CTRL 0
+param set-default EKF2_HGT_REF 2
+param set-default EKF2_OF_CTRL 1
+param set-default EKF2_RNG_CTRL 1
+param set-default EKF2_RNG_A_HMAX 5
+
+param set-default SENS_FLOW_ROT 0
+param set-default SENS_FLOW_MINHGT 0.5
+param set-default SENS_FLOW_MAXHGT 5
+param set-default SENS_FLOW_MAXR 2.5
+
+param set-default MPC_THR_HOVER 0.6
+param set-default COM_RC_IN_MODE 1

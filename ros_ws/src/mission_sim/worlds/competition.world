@@ -1,0 +1,137 @@
+<?xml version="1.0" ?>
+<sdf version="1.6">
+  <world name="competition">
+
+    <physics name="default_physics" default="0" type="ode">
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+      <real_time_update_rate>1000</real_time_update_rate>
+    </physics>
+
+    <include><uri>model://sun</uri></include>
+    <scene>
+      <ambient>0.6 0.6 0.6 1</ambient>
+      <background>0.7 0.7 0.7 1</background>
+      <shadows>0</shadows>
+    </scene>
+
+    <include><uri>model://ground_plane</uri></include>
+
+    <model name="competition_floor">
+      <static>true</static>
+      <pose>14 10 0.0005 0 0 0</pose>
+      <link name="link">
+        <visual name="visual">
+          <geometry><box><size>30 22 0.001</size></box></geometry>
+          <material>
+            <ambient>0.75 0.75 0.7 1</ambient>
+            <diffuse>0.75 0.75 0.7 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- vertical lines: parallel to north, every 4 m east of origin -->
+    <model name="vline_0">
+      <static>true</static><pose>0 10 0.001 0 0 0</pose>
+      <link name="link"><visual name="v">
+        <geometry><box><size>0.1 20 0.001</size></box></geometry>
+        <material><ambient>0.0 0.1 0.6 1</ambient><diffuse>0.0 0.2 1.0 1</diffuse></material>
+      </visual></link>
+    </model>
+    <model name="vline_1">
+      <static>true</static><pose>4 10 0.001 0 0 0</pose>
+      <link name="link"><visual name="v">
+        <geometry><box><size>0.1 20 0.001</size></box></geometry>
+        <material><ambient>0.0 0.1 0.6 1</ambient><diffuse>0.0 0.2 1.0 1</diffuse></material>
+      </visual></link>
+    </model>
+    <model name="vline_2">
+      <static>true</static><pose>8 10 0.001 0 0 0</pose>
+      <link name="link"><visual name="v">
+        <geometry><box><size>0.1 20 0.001</size></box></geometry>
+        <material><ambient>0.0 0.1 0.6 1</ambient><diffuse>0.0 0.2 1.0 1</diffuse></material>
+      </visual></link>
+    </model>
+    <model name="vline_3">
+      <static>true</static><pose>12 10 0.001 0 0 0</pose>
+      <link name="link"><visual name="v">
+        <geometry><box><size>0.1 20 0.001</size></box></geometry>
+        <material><ambient>0.0 0.1 0.6 1</ambient><diffuse>0.0 0.2 1.0 1</diffuse></material>
+      </visual></link>
+    </model>
+    <model name="vline_4">
+      <static>true</static><pose>16 10 0.001 0 0 0</pose>
+      <link name="link"><visual name="v">
+        <geometry><box><size>0.1 20 0.001</size></box></geometry>
+        <material><ambient>0.0 0.1 0.6 1</ambient><diffuse>0.0 0.2 1.0 1</diffuse></material>
+      </visual></link>
+    </model>
+    <model name="vline_5">
+      <static>true</static><pose>20 10 0.001 0 0 0</pose>
+      <link name="link"><visual name="v">
+        <geometry><box><size>0.1 20 0.001</size></box></geometry>
+        <material><ambient>0.0 0.1 0.6 1</ambient><diffuse>0.0 0.2 1.0 1</diffuse></material>
+      </visual></link>
+    </model>
+    <model name="vline_6">
+      <static>true</static><pose>24 10 0.001 0 0 0</pose>
+      <link name="link"><visual name="v">
+        <geometry><box><size>0.1 20 0.001</size></box></geometry>
+        <material><ambient>0.0 0.1 0.6 1</ambient><diffuse>0.0 0.2 1.0 1</diffuse></material>
+      </visual></link>
+    </model>
+    <model name="vline_7">
+      <static>true</static><pose>28 10 0.001 0 0 0</pose>
+      <link name="link"><visual name="v">
+        <geometry><box><size>0.1 20 0.001</size></box></geometry>
+        <material><ambient>0.0 0.1 0.6 1</ambient><diffuse>0.0 0.2 1.0 1</diffuse></material>
+      </visual></link>
+    </model>
+
+    <!-- horizontal lines: parallel to east, every 4 m north of origin -->
+    <model name="hline_0">
+      <static>true</static><pose>14 0 0.001 0 0 0</pose>
+      <link name="link"><visual name="h">
+        <geometry><box><size>28 0.1 0.001</size></box></geometry>
+        <material><ambient>0.0 0.1 0.6 1</ambient><diffuse>0.0 0.2 1.0 1</diffuse></material>
+      </visual></link>
+    </model>
+    <model name="hline_1">
+      <static>true</static><pose>14 4 0.001 0 0 0</pose>
+      <link name="link"><visual name="h">
+        <geometry><box><size>28 0.1 0.001</size></box></geometry>
+        <material><ambient>0.0 0.1 0.6 1</ambient><diffuse>0.0 0.2 1.0 1</diffuse></material>
+      </visual></link>
+    </model>
+    <model name="hline_2">
+      <static>true</static><pose>14 8 0.001 0 0 0</pose>
+      <link name="link"><visual name="h">
+        <geometry><box><size>28 0.1 0.001</size></box></geometry>
+        <material><ambient>0.0 0.1 0.6 1</ambient><diffuse>0.0 0.2 1.0 1</diffuse></material>
+      </visual></link>
+    </model>
+    <model name="hline_3">
+      <static>true</static><pose>14 12 0.001 0 0 0</pose>
+      <link name="link"><visual name="h">
+        <geometry><box><size>28 0.1 0.001</size></box></geometry>
+        <material><ambient>0.0 0.1 0.6 1</ambient><diffuse>0.0 0.2 1.0 1</diffuse></material>
+      </visual></link>
+    </model>
+    <model name="hline_4">
+      <static>true</static><pose>14 16 0.001 0 0 0</pose>
+      <link name="link"><visual name="h">
+        <geometry><box><size>28 0.1 0.001</size></box></geometry>
+        <material><ambient>0.0 0.1 0.6 1</ambient><diffuse>0.0 0.2 1.0 1</diffuse></material>
+      </visual></link>
+    </model>
+    <model name="hline_5">
+      <static>true</static><pose>14 20 0.001 0 0 0</pose>
+      <link name="link"><visual name="h">
+        <geometry><box><size>28 0.1 0.001</size></box></geometry>
+        <material><ambient>0.0 0.1 0.6 1</ambient><diffuse>0.0 0.2 1.0 1</diffuse></material>
+      </visual></link>
+    </model>
+
+  </world>
+</sdf>
